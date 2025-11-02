@@ -1,47 +1,62 @@
 import os
-import time
 import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = os.environ.get("TELEGRAM_TOKEN")
+# Get bot token from environment (Render Environment Variable)
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+# Your API endpoint (Render me bhi environment variable me daalna hai)
+NUMBER_API_URL = os.getenv("NUMBER_API_URL", "https://number-api.gauravyt566.workers.dev/?number={} ")
+
+if not TELEGRAM_TOKEN:
+    raise SystemExit("❌ TELEGRAM_TOKEN not set in environment variables.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bot ready hai!\nUse: /num <mobile_number>")
+    await update.message.reply_text("✅ Bot is online! Use /num <mobile_number>")
 
 async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("❌ Use: /num <mobile_number>")
+        await update.message.reply_text("⚙️ Usage: /num <mobile_number>")
         return
     number = context.args[0]
-    api_url = f"https://number-api.gauravyt566.workers.dev/?number={number}"
-    await update.message.reply_text(f"🔍 Searching for: {number}...")
+    await update.message.reply_text(f"🔍 Searching info for: {number}")
 
     try:
-        r = requests.get(api_url, timeout=10)
-        data = r.json()
-        results = data.get("result") or data.get("data") or []
-        if not results:
-            await update.message.reply_text("😕 Koi data nahi mila.")
-            return
-        msg = ""
-        for d in results:
-            msg += (
-                f"👤 Name: {d.get('name')}\n"
-                f"👨‍👦 Father: {d.get('father_name', 'N/A')}\n"
-                f"📱 Mobile: {d.get('mobile')}\n"
-                f"📞 Alt: {d.get('alt_mobile', 'N/A')}\n"
-                f"📍 Address: {d.get('address', '').replace('!', ', ')}\n"
-                f"🌐 Circle: {d.get('circle', 'N/A')}\n"
-                f"🆔 ID: {d.get('id_number', 'N/A')}\n\n"
-                "------------------------\n"
-            )
-        await update.message.reply_text(msg[:3900])
+        url = NUMBER_API_URL.format(number)
+        response = requests.get(url, timeout=15)
+        data = response.json()
     except Exception as e:
-        await update.message.reply_text(f"⚠️ API Error: {e}")
+        await update.message.reply_text(f"❌ API error: {e}")
+        return
+
+    result = None
+    if "data" in data:
+        if isinstance(data["data"], dict) and "result" in data["data"]:
+            result = data["data"]["result"]
+        elif isinstance(data["data"], list):
+            result = data["data"]
+    elif "result" in data:
+        result = data["result"]
+
+    if not result:
+        await update.message.reply_text("😕 No data found for that number.")
+        return
+
+    for record in result:
+        text = (
+            f"📞 Mobile: {record.get('mobile', 'N/A')}\n"
+            f"👤 Name: {record.get('name', 'N/A')}\n"
+            f"👨‍👦 Father: {record.get('father_name', record.get('fname', 'N/A'))}\n"
+            f"📍 Address: {record.get('address', 'N/A').replace('!', ', ')}\n"
+            f"📱 Alt: {record.get('alt_mobile', record.get('alt', 'N/A'))}\n"
+            f"🌐 Circle: {record.get('circle', 'N/A')}\n"
+            f"🆔 ID: {record.get('id_number', record.get('id', 'N/A'))}"
+        )
+        await update.message.reply_text(text)
 
 def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("num", num))
     app.run_polling()
