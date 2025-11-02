@@ -63,6 +63,6 @@ def main():
     app.add_handler(CommandHandler("num", num))
     app.run_polling()
 
-# ✅ Ye line sabse important hai (isse "NameError" wala issue fix ho gaya)
-if name == "main":
+# ✅ Ye line sabse important hai (CORRECTED VERSION)
+if __name__ == "__main__":
     main()
