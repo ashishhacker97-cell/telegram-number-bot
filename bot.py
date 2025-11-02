@@ -3,22 +3,23 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Get bot token from environment (Render Environment Variable)
+# 🔹 Environment se token aur API URL lena (Render me Environment Variable set karna zaruri)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-
-# Your API endpoint (Render me bhi environment variable me daalna hai)
-NUMBER_API_URL = os.getenv("NUMBER_API_URL", "https://number-api.gauravyt566.workers.dev/?number={} ")
+NUMBER_API_URL = os.getenv("NUMBER_API_URL", "https://number-api.gauravyt566.workers.dev/?number={}")
 
 if not TELEGRAM_TOKEN:
     raise SystemExit("❌ TELEGRAM_TOKEN not set in environment variables.")
 
+# 🔹 Start Command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot is online! Use /num <mobile_number>")
 
+# 🔹 Number Command
 async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("⚙️ Usage: /num <mobile_number>")
         return
+
     number = context.args[0]
     await update.message.reply_text(f"🔍 Searching info for: {number}")
 
@@ -55,11 +56,13 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(text)
 
+# 🔹 Main Function
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("num", num))
     app.run_polling()
 
+# ✅ Ye line sabse important hai (isse "NameError" wala issue fix ho gaya)
 if name == "main":
     main()
